@@ -43,8 +43,8 @@
             font-weight: 500;
             transition: all 0.2s ease;
             text-align: center;
-            /* Ensures better wrapping on small devices */
-            white-space: nowrap; 
+            /* FIXED: Removed nowrap to allow wrapping on mobile */
+            white-space: normal; 
         }
         /* Style for when the (hidden) checkbox is checked */
         .quiz-option input:checked + span {
@@ -56,13 +56,19 @@
              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); 
         }
         
-        /* Ensures radio buttons for models are full width on mobile */
+        /* FIXED: Better mobile handling for model selection (long text) */
         @media (max-width: 640px) {
             .question-group .flex-wrap > .quiz-option {
                 width: 100%;
             }
             .question-group .flex-wrap {
                 gap: 0.5rem; /* Reduced gap for better mobile spacing */
+            }
+            /* Specific fix for target model radios */
+            [name="targetModel"] + span {
+                white-space: normal !important;
+                line-height: 1.3;
+                padding: 0.75rem 0.5rem;
             }
         }
 
@@ -82,7 +88,20 @@
             </div>
             <h1 class="text-4xl font-bold text-gray-900 mb-2">VISTA</h1>
             <p class="text-xs font-medium uppercase text-indigo-600 tracking-wider">Visual Intent Synthesis Tuning Agent</p>
-            <p id="auth-status" class="text-lg text-gray-600 mb-8">Authorizing user automatically...</p>
+            <p id="auth-status" class="text-lg text-gray-600 mb-8">Sign in to unlock your creative prompts...</p>
+            
+            <!-- Google Sign-In Button -->
+            <button id="google-signin-btn" class="flex items-center justify-center gap-3 w-full max-w-sm bg-white border-2 border-gray-300 rounded-2xl px-6 py-3 text-gray-700 font-semibold hover:border-blue-500 hover:shadow-md transition-all duration-200 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5 fill-current" aria-hidden="true">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+            </button>
+            
+            <p class="text-xs text-gray-400">Or continue anonymously (limited features)</p>
             <p id="user-id-display" class="text-xs text-gray-400 mt-4"></p>
         </div>
 
@@ -369,7 +388,9 @@
             getAuth, 
             onAuthStateChanged,
             signInAnonymously,
-            signInWithCustomToken
+            signInWithCustomToken,
+            GoogleAuthProvider,
+            signInWithPopup
         } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js"; 
         import { 
             getFirestore, 
@@ -381,19 +402,29 @@
         } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
         // --- Firebase & App Config ---
-        // CRITICAL: We must use the dynamically injected variables for the platform to function.
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        // Using the provided config directly (hardcoded for production reliability)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqtL2RiUVW766m9Mgxm3D37ZDU4WKDmR0",
+            authDomain: "vista-65b5e.firebaseapp.com",
+            projectId: "vista-65b5e",
+            storageBucket: "vista-65b5e.firebasestorage.app",
+            messagingSenderId: "178705255946",
+            appId: "1:178705255946:web:ea449f74ad44489f0c99f3"
+        };
+        const appId = 'vista-65b5e';  // Derived from config for consistency
+        const initialAuthToken = null;  // No custom token provided; defaults to anonymous auth
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app); 
         const db = getFirestore(app);
-        setLogLevel('Debug'); // Enable debug logging for Firebase
+        setLogLevel('debug'); // Fixed: lowercase for actual debug logging
+
+        // --- Google Provider Setup ---
+        const provider = new GoogleAuthProvider();
 
         // --- Gemini API Config ---
         const PROMPT_TUNING_MODEL = `gemini-2.5-flash-preview-09-2025`;
-        const API_KEY = "AIzaSyB7qwjvDXOOIJR1KMT4PpAuhn9kjPqbhls"; // Kept as empty string for runtime injection
+        const API_KEY = "AIzaSyB7qwjvDXOOIJR1KMT4PpAuhn9kjPqbhls"; // TODO: Proxy via backend
 
         // --- App State ---
         let userId = null;
@@ -413,6 +444,7 @@
         const creditCounter = document.getElementById('credit-counter');
         const authStatus = document.getElementById('auth-status');
         const userIdDisplay = document.getElementById('user-id-display');
+        const googleSigninBtn = document.getElementById('google-signin-btn');
         
         // Wizard Steps
         const wizardSteps = document.querySelectorAll('.wizard-step');
@@ -442,23 +474,54 @@
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        // --- 1. Authentication (Simplified) ---
+        // --- 1. Authentication (Updated with Google) ---
         
         async function initializeAuth() {
             loginScreen.classList.remove('hidden');
             mainApp.classList.add('hidden');
+            authStatus.textContent = "Ready to create? Sign in below.";
             
+            // Google Sign-In Button Listener
+            googleSigninBtn.addEventListener('click', () => {
+                authStatus.textContent = "Signing you in with Google...";
+                googleSigninBtn.disabled = true;
+                const originalHTML = googleSigninBtn.innerHTML;
+                googleSigninBtn.innerHTML = '<div class="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto"></div> Continue with Google';
+                
+                signInWithPopup(auth, provider)
+                    .then((result) => {
+                        // This will trigger onAuthStateChanged automatically
+                        console.log("Google sign-in success:", result.user);
+                        // Optional: Get tokens if needed
+                        const credential = GoogleAuthProvider.credentialFromResult(result);
+                        const token = credential.accessToken;
+                    })
+                    .catch((error) => {
+                        console.error("Google sign-in error:", error);
+                        authStatus.textContent = `Sign-in failed: ${error.message}. Trying anonymous...`;
+                        // Fallback to anonymous
+                        signInAnonymously(auth).catch((anonError) => {
+                            authStatus.textContent = "Auth failed completely. Please refresh.";
+                            console.error("Anonymous fallback failed:", anonError);
+                        });
+                    })
+                    .finally(() => {
+                        googleSigninBtn.disabled = false;
+                        googleSigninBtn.innerHTML = originalHTML;
+                    });
+            });
+
             try {
-                // Use custom token if provided, otherwise sign in anonymously
+                // Use custom token if provided, otherwise wait for user interaction (Google or anon fallback)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                    // Don't auto-anon anymore; let user choose Google first
+                    // Anon only triggers on Google error (see catch above)
                 }
             } catch (error) {
-                // If sign-in fails (e.g., bad token), onAuthStateChanged will still handle the UI
                 console.error("Initial Auth Attempt Error:", error.message);
-                authStatus.textContent = "Authentication Failed. Please refresh.";
+                authStatus.textContent = "Something went wrong. Please try signing in.";
             }
         }
         
@@ -477,12 +540,12 @@
                 userId = null;
                 // If we land here and mainApp is hidden, show the error message.
                 if (mainApp.classList.contains('hidden')) {
-                     authStatus.textContent = "Could not authenticate user. Please refresh.";
+                     authStatus.textContent = "Not signed in yet. Please sign in above.";
                 }
             }
         });
 
-        // Start the automatic sign-in process
+        // Start the process
         initializeAuth();
 
 
