@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISTA Prompt Tuner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Custom styles for our "cozy, premium" feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Hide the file input */
+        #image-input { display: none; }
+        
+        /* Custom styled checkboxes */
+        .quiz-option {
+            display: block;
+            position: relative;
+            cursor: pointer;
+        }
+        .quiz-option input { display: none; }
+        .quiz-option span {
+            display: block;
+            background-color: #f1f5f9; 
+            border: 2px solid #f1f5f9;
+            border-radius: 9999px; 
+            padding: 0.5rem 1rem; 
+            font-size: 0.875rem; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-align: center;
+            /* Ensures better wrapping on small devices */
+            white-space: nowrap; 
+        }
+        /* Style for when the (hidden) checkbox is checked */
+        .quiz-option input:checked + span {
+            background-color: #4f46e5; 
+            color: #ffffff;
+            border-color: #4f46e5;
+        }
+        .quiz-option input:focus-visible + span {
+             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); 
+        }
+        
+        /* Ensures radio buttons for models are full width on mobile */
+        @media (max-width: 640px) {
+            .question-group .flex-wrap > .quiz-option {
+                width: 100%;
+            }
+            .question-group .flex-wrap {
+                gap: 0.5rem; /* Reduced gap for better mobile spacing */
+            }
+        }
+
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <!-- Main App Container -->
+    <div id="app-container" class="min-h-screen max-w-lg mx-auto flex flex-col transition-opacity duration-500">
+
+        <!-- 1. Login Screen (Visible by default) -->
+        <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 text-center">
+            <div class="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-lg mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L1.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.25 12l2.846-.813a4.5 4.5 0 013.09-3.09L25.5 5.25l-.813 2.846a4.5 4.5 0 01-3.09 3.09L18.25 12z" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Welcome to VISTA</h1>
+            <p class="text-xs font-medium uppercase text-indigo-600 tracking-wider">Visual Intent Synthesis Tuning Agent</p>
+            <p class="text-lg text-gray-600 mb-10">Turn your ideas into 5 perfect prompts, instantly.</p>
+            
+            <button id="google-signin-btn" class="w-full max-w-xs bg-white text-gray-700 font-semibold py-3 px-6 rounded-full border border-gray-300 shadow-md hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-3">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+                <span>Sign in with Google</span>
+            </button>
+        </div>
+
+        <!-- 2. Main App Screen (Hidden by default) -->
+        <div id="main-app" class="hidden flex-1 flex-col">
+            <!-- Header -->
+            <header class="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-gray-50/90 backdrop-blur-sm z-10">
+                <div> <!-- Grouping for title and tagline -->
+                    <h1 class="text-2xl font-bold text-gray-900">VISTA</h1>
+                    <p class="text-xs font-medium uppercase text-indigo-600 tracking-wider hidden sm:block">Visual Intent Synthesis Tuning Agent</p>
+                </div>
+                <div id="credit-counter" class="text-sm font-semibold text-gray-600 bg-gray-100 rounded-full px-4 py-1.5">
+                    Credits: 10/10
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 flex flex-col overflow-y-auto">
+                
+                <!-- Wizard Step 1: Text Input -->
+                <div id="step-1-text" class="wizard-step flex-1 flex flex-col p-4 md:p-6 space-y-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Step 1: What's your core idea?</h2>
+                    <textarea id="prompt-input" rows="8" class="w-full p-4 text-gray-700 bg-white border-2 border-gray-200 rounded-2xl resize-none focus:border-blue-500 focus:ring-0 transition-all duration-200" placeholder="Tell me what you're imagining... (e.g., 'A cool profile pic of me as a sci-fi hero, I like Nike and the color blue.')"></textarea>
+                    <button id="btn-to-step-2" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                        Next: Add Photos
+                    </button>
+                </div>
+                
+                <!-- Wizard Step 2: Photo Upload -->
+                <div id="step-2-photos" class="wizard-step hidden flex-1 flex-col p-4 md:p-6 space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Step 2: Show me your style</h2>
+                    <p class="text-sm text-gray-600">Upload up to 10 photos of your outfits, or any style/aesthetic references you like.</p>
+                    
+                    <input type="file" id="image-input" accept="image/png, image/jpeg" multiple>
+                    <label id="image-upload-box" for="image-input" class="relative block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                        <span class="mt-2 block text-sm font-medium text-gray-600">Tap to upload photos</span>
+                        <p id="image-counter" class="text-xs text-gray-500">0 of 10 uploaded</p>
+                    </label>
+                    
+                    <!-- Image Preview Grid -->
+                    <div id="image-preview-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        <!-- JS will populate this -->
+                    </div>
+                    
+                    <div class="flex-1"></div> <!-- Spacer -->
+                    <div class="flex space-x-3 pt-4">
+                        <button id="btn-back-to-step-1" class="w-1/3 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl hover:bg-gray-300 transition-all duration-300">
+                            Back
+                        </button>
+                        <button id="btn-to-step-3" class="w-2/3 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                            Next: Quiz (1/2)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Wizard Step 3: Quiz (Part 1) -->
+                <div id="step-3-quiz-a" class="wizard-step hidden flex-1 flex-col p-4 md:p-6 space-y-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Step 3: Tell me more (1/2)</h2>
+                    <form id="quiz-form-a" class="space-y-6">
+                        <!-- Q1: Colours -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">1. Favourite Colours?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Black"><span>Black</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="White"><span>White</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Red"><span>Red</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Blue"><span>Blue</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Green"><span>Green</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Yellow"><span>Yellow</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Purple"><span>Purple</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Pink"><span>Pink</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Orange"><span>Orange</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Brown"><span>Brown</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Beige"><span>Beige</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Gold"><span>Gold</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="colors" value="Silver"><span>Silver</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Q2: Vibe -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">2. What's the overall vibe?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Casual"><span>Casual</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Elegant"><span>Elegant</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Sporty"><span>Sporty</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Gothic"><span>Gothic</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Sci-Fi"><span>Sci-Fi</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Fantasy"><span>Fantasy</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Vintage"><span>Vintage</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="vibe" value="Cozy"><span>Cozy</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Q3: Brands -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">3. Favourite Clothing Brands?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Nike"><span>Nike</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Adidas"><span>Adidas</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Gucci"><span>Gucci</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Zara"><span>Zara</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Levi's"><span>Levi's</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Supreme"><span>Supreme</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="Off-White"><span>Off-White</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="brands" value="None/Other"><span>None/Other</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Q4: Celebrities -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">4. Any Celebrities whose style you admire?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="Zendaya"><span>Zendaya</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="Harry Styles"><span>Harry Styles</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="Rihanna"><span>Rihanna</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="Timothee Chalamet"><span>Timothée Chalamet</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="Billie Eilish"><span>Billie Eilish</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="ASAP Rocky"><span>A$AP Rocky</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="celebs" value="None/Other"><span>None/Other</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Q5: Setting -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">5. What's the setting?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Cityscape"><span>Cityscape</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Nature"><span>Nature</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Indoors/Cozy"><span>Indoors/Cozy</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Studio/Minimalist"><span>Studio/Minimalist</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Futuristic"><span>Futuristic</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="setting" value="Surreal"><span>Surreal</span></label>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="flex-1"></div> <!-- Spacer -->
+                    <div class="flex space-x-3 pt-4">
+                        <button id="btn-back-to-step-2" class="w-1/3 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl hover:bg-gray-300 transition-all duration-300">
+                            Back
+                        </button>
+                        <button id="btn-to-step-4" class="w-2/3 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                            Next: Quiz (2/2)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Wizard Step 4: Quiz (Part 2) -->
+                <div id="step-4-quiz-b" class="wizard-step hidden flex-1 flex-col p-4 md:p-6 space-y-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Step 4: Almost done! (2/2)</h2>
+                    <form id="quiz-form-b" class="space-y-6">
+                        <!-- Q6: Lighting -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">6. Preferred Lighting?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="lighting" value="Bright/Sunny"><span>Bright/Sunny</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="lighting" value="Dark/Moody"><span>Dark/Moody</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="lighting" value="Neon Lights"><span>Neon Lights</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="lighting" value="Soft/Dreamy"><span>Soft/Dreamy</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="lighting" value="Golden Hour"><span>Golden Hour</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Q7: Key Items -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">7. Key items you want to see?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Sneakers"><span>Sneakers</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Hoodies"><span>Hoodies</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Dresses"><span>Dresses</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Jewelry"><span>Jewelry</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Hats"><span>Hats</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="items" value="Glasses"><span>Glasses</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Q8: Textures -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">8. What textures do you like?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Denim"><span>Denim</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Leather"><span>Leather</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Knitwear"><span>Knitwear</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Silk/Satin"><span>Silk/Satin</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Metallic"><span>Metallic</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="textures" value="Faux Fur"><span>Faux Fur</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Q9: Art Style -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">9. Art Style Preference?</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option"><input type="checkbox" name="style" value="Photorealistic"><span>Photorealistic</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="style" value="Anime/Manga"><span>Anime/Manga</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="style" value="Oil Painting"><span>Oil Painting</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="style" value="3D Render"><span>3D Render</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="style" value="Cartoon"><span>Cartoon</span></label>
+                                <label class="quiz-option"><input type="checkbox" name="style" value="Pixel Art"><span>Pixel Art</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Q10: Target Model (NEW) -->
+                        <div class="question-group">
+                            <h3 class="font-semibold text-gray-700 mb-3">10. Target AI Model (For Tuning)</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="quiz-option w-full sm:w-auto flex-1">
+                                    <input type="radio" name="targetModel" value="DALL-E 3" checked>
+                                    <span>DALL-E 3 (Short, High-Concept)</span>
+                                </label>
+                                <label class="quiz-option w-full sm:w-auto flex-1">
+                                    <input type="radio" name="targetModel" value="Midjourney v6">
+                                    <span>Midjourney v6 (Aesthetic, Keyword-Heavy)</span>
+                                </label>
+                                <label class="quiz-option w-full sm:w-auto flex-1">
+                                    <input type="radio" name="targetModel" value="Stable Diffusion XL (SDXL)">
+                                    <span>Stable Diffusion XL (SDXL) (Detailed, Open Source)</span>
+                                </label>
+                                <label class="quiz-option w-full sm:w-auto flex-1">
+                                    <input type="radio" name="targetModel" value="Leonardo AI">
+                                    <span>Leonardo AI (Vibrant, Artistic)</span>
+                                </label>
+                                <label class="quiz-option w-full sm:w-auto flex-1">
+                                    <input type="radio" name="targetModel" value="Imagen/Gemini">
+                                    <span>Imagen/Gemini (Advanced, Photo-focused)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="flex-1"></div> <!-- Spacer -->
+                    <!-- Generate Button -->
+                    <div class="flex space-x-3 pt-4">
+                        <button id="btn-back-to-step-3" class="w-1/3 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl hover:bg-gray-300 transition-all duration-300">
+                            Back
+                        </button>
+                        <button id="generate-btn" class="w-2/3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98] disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-md disabled:transform-none">
+                            <span id="generate-btn-text">Tune 5 Prompts (1 Credit)</span>
+                            <div id="generate-spinner" class="hidden mx-auto w-6 h-6 border-4 border-t-transparent border-white rounded-full animate-spin"></div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Wizard Step 5: Results - Renamed to Prompt Results -->
+                <div id="step-5-results" class="wizard-step hidden flex-1 flex-col p-4 md:p-6 space-y-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Your Tuned Prompts Are Ready!</h2>
+                    <p class="text-gray-600">VISTA synthesized your input into 5 tailored prompts for **<span id="target-model-display" class="font-semibold text-indigo-600"></span>**. Copy and use them in your favorite image generator.</p>
+
+                    <h3 class="text-lg font-semibold text-gray-800 border-t pt-4">5 Tuned Prompts:</h3>
+                    <div id="prompt-list" class="space-y-4">
+                        <!-- Prompts will be injected here -->
+                    </div>
+                    
+                    <div class="flex-1"></div> <!-- Spacer -->
+                    <button id="start-over-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                        Start Over
+                    </button>
+                </div>
+
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Error / Limit Modal -->
+    <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-white max-w-sm w-full rounded-3xl p-6 shadow-2xl text-center">
+            <h3 id="modal-title" class="text-xl font-semibold text-gray-900 mb-3">Limit Reached</h3>
+            <p id="modal-message" class="text-gray-600 mb-6">You've used all 10 generations for today. Please come back tomorrow for more!</p>
+            <button id="modal-close-btn" class="w-full bg-blue-600 text-white font-semibold py-2.5 px-6 rounded-full hover:bg-blue-700 transition-all duration-200">
+                Got it
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // FIX: All Firebase SDKs must use a consistent version (11.6.1)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            onAuthStateChanged
+            // signInWithCustomToken and signInAnonymously removed to prevent automatic sign-in
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            runTransaction,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase & App Config ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // No longer needed for auto-sign-in
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app); 
+        const db = getFirestore(app);
+        setLogLevel('Debug'); // Enable debug logging for Firebase
+
+        // --- Gemini API Config ---
+        // Used for Prompt Tuning (takes text/images and outputs JSON array of 5 strings)
+        const PROMPT_TUNING_MODEL = `gemini-2.5-flash-preview-09-2025`;
+        // API key used for all model calls
+        const API_KEY = ""; // Kept as empty string for runtime injection
+
+        // --- App State ---
+        let userId = null;
+        let userDocRef = null;
+        let dailyCredits = 0;
+        const MAX_CREDITS = 10;
+        const MAX_IMAGES = 10;
+        
+        // Wizard Data
+        let visionText = "";
+        let uploadedImages = []; // Array of { base64, mimeType, id }
+        let quizAnswers = {};
+        let targetModel = "DALL-E 3"; // Default target model
+
+        // --- DOM Elements ---
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const creditCounter = document.getElementById('credit-counter');
+        
+        // Wizard Steps
+        const wizardSteps = document.querySelectorAll('.wizard-step');
+        
+        // Step 1
+        const promptInput = document.getElementById('prompt-input');
+        
+        // Step 2
+        const imageInput = document.getElementById('image-input');
+        const imageUploadBox = document.getElementById('image-upload-box');
+        const imageCounter = document.getElementById('image-counter');
+        const imagePreviewGrid = document.getElementById('image-preview-grid');
+        
+        // Step 4
+        const targetModelRadios = document.querySelectorAll('input[name="targetModel"]');
+        const generateBtn = document.getElementById('generate-btn');
+        const generateBtnText = document.getElementById('generate-btn-text');
+        const generateSpinner = document.getElementById('generate-spinner');
+        
+        // Step 5
+        const promptList = document.getElementById('prompt-list');
+        const startOverBtn = document.getElementById('start-over-btn');
+        const targetModelDisplay = document.getElementById('target-model-display');
+
+
+        // Modals
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        // --- 1. Authentication ---
+
+        // This listener handles the transition to the main app *after* a successful sign-in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                userId = user.uid;
+                initUserDocument(userId);
+                loginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                mainApp.classList.add('flex'); // Make it flex as designed
+                navigateToStep(1); // Start at step 1
+            } else {
+                // User is signed out (or initial state)
+                userId = null;
+                loginScreen.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+                mainApp.classList.remove('flex');
+            }
+        });
+
+        // This is the only way to sign in now
+        googleSignInBtn.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Google Sign-In Error: ", error);
+                showModal("Sign-In Failed", "There was an error trying to sign you in. Please try again.");
+            }
+        });
+        
+        // NOTE: The IIFE for automatic token/anonymous sign-in has been removed.
+        // The app now waits for the user to click the Google sign-in button.
+
+
+        // --- 2. Firestore Credit System ---
+
+        async function initUserDocument(uid) {
+            if (!uid) return;
+            // The path matches the one secured in the guide: artifacts/{appId}/users/{userId}/vista-data/usage
+            userDocRef = doc(db, `artifacts/${appId}/users/${uid}/vista-data/usage`);
+            const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+            
+            try {
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.lastUsedDate === today) {
+                        dailyCredits = data.creditsLeft;
+                    } else {
+                        dailyCredits = MAX_CREDITS;
+                        await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
+                    }
+                } else {
+                    dailyCredits = MAX_CREDITS;
+                    await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
+                }
+            } catch (error) {
+                console.error("Error initializing user document: ", error);
+                showModal("Database Error", "Could not load your user data. Please refresh.");
+            }
+            updateCreditUI();
+        }
+
+        function updateCreditUI() {
+            creditCounter.textContent = `Credits: ${dailyCredits}/${MAX_CREDITS}`;
+            generateBtn.disabled = (dailyCredits <= 0);
+            
+            if (dailyCredits <= 0) {
+                generateBtnText.textContent = "No Credits Left Today";
+            } else {
+                // Updated text to reflect 5 prompts
+                generateBtnText.textContent = `Tune 5 Prompts (1 Credit)`; 
+            }
+        }
+        
+        async function updateUserCredits() {
+            if (!userDocRef) return false;
+            
+            try {
+                const newCredits = await runTransaction(db, async (transaction) => {
+                    const freshSnap = await transaction.get(userDocRef);
+                    if (!freshSnap.exists()) throw new Error("User document does not exist!");
+                    
+                    const currentCredits = freshSnap.data().creditsLeft;
+                    if (currentCredits > 0) {
+                        const newCreditCount = currentCredits - 1;
+                        transaction.update(userDocRef, { creditsLeft: newCreditCount });
+                        return newCreditCount;
+                    } else {
+                        // Throw error to roll back transaction
+                        throw new Error("No credits available.");
+                    }
+                });
+                dailyCredits = newCredits;
+                updateCreditUI();
+                return true; // Success
+            } catch (error) {
+                console.error("Error updating credits: ", error);
+                if (error.message === "No credits available.") {
+                    showModal("Credit Limit", "You have no credits left for today.");
+                } else {
+                    showModal("Credit Error", "Could not update your credit count. Please refresh.");
+                }
+                return false; // Failure
+            }
+        }
+
+        // --- 3. Wizard Navigation ---
+
+        function navigateToStep(stepNumber) {
+            wizardSteps.forEach(step => step.classList.add('hidden'));
+            const stepToShow = document.getElementById(`step-${stepNumber}-` + 
+                (stepNumber === 1 ? 'text' :
+                 stepNumber === 2 ? 'photos' :
+                 stepNumber === 3 ? 'quiz-a' :
+                 stepNumber === 4 ? 'quiz-b' : 'results')
+            );
+            if (stepToShow) {
+                stepToShow.classList.remove('hidden');
+                stepToShow.classList.add('flex');
+            }
+            window.scrollTo(0, 0); // Scroll to top on step change
+        }
+        
+        // --- Navigation Button Listeners ---
+        document.getElementById('btn-to-step-2').addEventListener('click', () => {
+            visionText = promptInput.value; // Save data
+            navigateToStep(2);
+        });
+        document.getElementById('btn-back-to-step-1').addEventListener('click', () => navigateToStep(1));
+        document.getElementById('btn-to-step-3').addEventListener('click', () => navigateToStep(3));
+        document.getElementById('btn-back-to-step-2').addEventListener('click', () => navigateToStep(2));
+        document.getElementById('btn-to-step-4').addEventListener('click', () => navigateToStep(4));
+        document.getElementById('btn-back-to-step-3').addEventListener('click', () => navigateToStep(3));
+        startOverBtn.addEventListener('click', resetWizard);
+
+        // --- 4. Image Handling (Step 2) ---
+
+        imageInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (!files) return;
+
+            for (let i = 0; i < files.length; i++) {
+                if (uploadedImages.length >= MAX_IMAGES) {
+                    showModal("Upload Limit", `You can only upload a maximum of ${MAX_IMAGES} photos.`);
+                    break; 
+                }
+                
+                const file = files[i];
+                const fileId = crypto.randomUUID(); 
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64Data = event.target.result.split(',')[1];
+                    const imageData = {
+                        base64: base64Data,
+                        mimeType: file.type,
+                        id: fileId
+                    };
+                    uploadedImages.push(imageData);
+                    addImageThumbnail(imageData, event.target.result);
+                    updateImageCounter();
+                };
+                reader.readAsDataURL(file);
+            }
+            e.target.value = null; 
+        });
+
+        function addImageThumbnail(imageData, src) {
+            const thumbContainer = document.createElement('div');
+            thumbContainer.className = 'relative w-full aspect-square rounded-lg overflow-hidden shadow';
+            thumbContainer.setAttribute('data-id', imageData.id);
+            
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'w-full h-full object-cover';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 hover:bg-black/75 transition-all';
+            removeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+            
+            removeBtn.addEventListener('click', () => {
+                uploadedImages = uploadedImages.filter(img => img.id !== imageData.id);
+                thumbContainer.remove();
+                updateImageCounter();
+            });
+            
+            thumbContainer.appendChild(img);
+            thumbContainer.appendChild(removeBtn);
+            imagePreviewGrid.appendChild(thumbContainer);
+        }
+
+        function updateImageCounter() {
+            imageCounter.textContent = `${uploadedImages.length} of ${MAX_IMAGES} uploaded`;
+            imageUploadBox.classList.toggle('hidden', uploadedImages.length >= MAX_IMAGES);
+        }
+
+        // --- 5. Modal Controls ---
+
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+        }
+        modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+        // --- 6. Core Generation Logic (Step 4) ---
+
+        generateBtn.addEventListener('click', handleGeneration);
+
+        async function handleGeneration() {
+            if (dailyCredits <= 0) {
+                showModal("Limit Reached", "You've used all 10 generations for today. Please come back tomorrow!");
+                return;
+            }
+            
+            // 1. Collect Quiz & Model Data
+            quizAnswers = {};
+            const checkedBoxes = document.querySelectorAll('#quiz-form-a input:checked, #quiz-form-b input:checked');
+            checkedBoxes.forEach(box => {
+                const name = box.name;
+                const value = box.value;
+                if (name === 'targetModel') {
+                    targetModel = value;
+                } else {
+                    if (!quizAnswers[name]) {
+                        quizAnswers[name] = [];
+                    }
+                    quizAnswers[name].push(value);
+                }
+            });
+            
+            // Display model name in the results screen
+            targetModelDisplay.textContent = targetModel;
+
+            // 2. Debit Credit
+            const creditDebited = await updateUserCredits();
+            if (!creditDebited) return; // Stop if credit debit failed
+
+            setLoadingState(true);
+            
+            let tunedPrompts = [];
+
+            try {
+                // --- Phase 1: Prompt Tuning (LLM Call) ---
+                const systemPrompt = `You are VISTA (Visual Intent Synthesis Tuning Agent), a friendly and highly creative prompt engineer. A user has provided a rich set of data (text idea, quiz preferences, and reference images).
+Your job is to synthesize ALL this information into 5 diverse, high-quality, professional AI art prompts.
+CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. Use its unique style and syntax (e.g., Midjourney requires short, descriptive text; DALL-E 3 prefers simple language; SDXL needs strong keywords).
+- Analyze the user's text for the core idea.
+- Analyze the JSON quiz answers for specific keywords to include.
+- Analyze ALL provided images for clothing styles, aesthetics, and color palettes.
+- Combine all data into 5 distinct, detailed, paragraph-length prompts.
+- Do NOT chat or explain. Respond ONLY with a valid JSON array of 5 strings.
+- Example Response: ["prompt 1...", "prompt 2...", "prompt 3...", "prompt 4...", "prompt 5..."]`;
+
+                const promptTuningPayload = {
+                    contents: [{ role: "user", parts: [
+                        { text: `User's core idea: "${visionText}"` },
+                        { text: `User's quiz preferences: ${JSON.stringify(quizAnswers)}` },
+                        ...uploadedImages.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.base64 } }))
+                    ] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: { type: "STRING" }
+                        }
+                    }
+                };
+                
+                tunedPrompts = await fetchWithBackoff(`https://generativelanguage.googleapis.com/v1beta/models/${PROMPT_TUNING_MODEL}:generateContent?key=${API_KEY}`, promptTuningPayload);
+
+                if (!tunedPrompts || tunedPrompts.length === 0) {
+                    throw new Error("Received empty or invalid prompts from API.");
+                }
+
+                // --- Phase 2: Display Results ---
+                displayPrompts(tunedPrompts);
+                navigateToStep(5);
+
+            } catch (error) {
+                console.error("Error during generation: ", error);
+                // Re-enable button on fatal error
+                setLoadingState(false); 
+                showModal("Tuning Failed", `Sorry, something went wrong during the prompt tuning process. ${error.message}`);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+        
+        // --- 7. Helper Functions ---
+
+        async function fetchWithBackoff(url, payload, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`API Error: ${response.status} - ${await response.text()}`);
+                    const result = await response.json();
+                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!jsonText) throw new Error("Invalid API response structure. Response text was empty.");
+                    return JSON.parse(jsonText);
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} failed. Retrying...`, error.message);
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function displayPrompts(prompts) {
+            // Display Tuned Prompts
+            promptList.innerHTML = ''; 
+            prompts.forEach((promptText, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl shadow-lg border border-gray-100 flex justify-between items-start space-x-3";
+                card.innerHTML = `
+                    <p class="text-sm text-gray-700 font-semibold w-10 shrink-0 border-r border-gray-200 pr-3 mr-3">#${index + 1}</p>
+                    <p class="flex-1 text-sm text-gray-700 break-words">${promptText}</p>
+                    <button class="copy-btn p-2.5 bg-gray-100 text-gray-600 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-all duration-200 active:scale-90" aria-label="Copy prompt">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25H9A2.25 2.25 0 016.75 4.5v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                    </button>
+                `;
+                
+                const copyBtn = card.querySelector('.copy-btn');
+                const originalIcon = copyBtn.innerHTML;
+                const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-green-500"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+                
+                copyBtn.addEventListener('click', () => {
+                    copyToClipboard(promptText, copyBtn, originalIcon, checkIcon);
+                });
+                promptList.appendChild(card);
+            });
+        }
+
+        function setLoadingState(isLoading) {
+            generateBtn.disabled = isLoading;
+            generateBtnText.classList.toggle('hidden', isLoading);
+            generateSpinner.classList.toggle('hidden', !isLoading);
+        }
+
+        function copyToClipboard(text, buttonEl, originalIcon, checkIcon) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed"; textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus(); textArea.select();
+            try {
+                if (document.execCommand('copy')) { 
+                    buttonEl.innerHTML = checkIcon;
+                    buttonEl.disabled = true;
+                    setTimeout(() => {
+                        buttonEl.innerHTML = originalIcon;
+                        buttonEl.disabled = false;
+                    }, 2000);
+                }
+            } catch (err) { console.error('Fallback: Oops, unable to copy', err); }
+            document.body.removeChild(textArea);
+        }
+        
+        function resetWizard() {
+            // Reset state
+            visionText = "";
+            uploadedImages = [];
+            quizAnswers = {};
+            targetModel = "DALL-E 3";
+            
+            // Reset UI
+            promptInput.value = "";
+            imagePreviewGrid.innerHTML = "";
+            updateImageCounter();
+            
+            // Uncheck all boxes, reset radio button
+            const allCheckboxes = document.querySelectorAll('#quiz-form-a input, #quiz-form-b input');
+            allCheckboxes.forEach(box => {
+                if(box.type === 'checkbox') {
+                    box.checked = false;
+                } else if (box.name === 'targetModel' && box.value === 'DALL-E 3') {
+                    box.checked = true;
+                }
+            });
+            
+            // Go to step 1
+            navigateToStep(1);
+        }
+
+    </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
