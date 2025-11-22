@@ -1,16 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
-  <head>
-    <meta charset="UTF-8">
-    <title>Untitled</title>
-    
-
-  </head>
-    
-  <body>
-  <!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -84,21 +73,24 @@
     <!-- Main App Container -->
     <div id="app-container" class="min-h-screen max-w-lg mx-auto flex flex-col transition-opacity duration-500">
 
-        <!-- 1. Login Screen (Visible by default) -->
+        <!-- 1. Loading/Auth Screen (Visible by default) -->
         <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 text-center">
-            <div class="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-lg mb-6">
+            <div class="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-lg mb-6 animate-pulse">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-white">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L1.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.25 12l2.846-.813a4.5 4.5 0 013.09-3.09L25.5 5.25l-.813 2.846a4.5 4.5 0 01-3.09 3.09L18.25 12z" />
                 </svg>
             </div>
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">Welcome to VISTA</h1>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">VISTA</h1>
             <p class="text-xs font-medium uppercase text-indigo-600 tracking-wider">Visual Intent Synthesis Tuning Agent</p>
-            <p class="text-lg text-gray-600 mb-10">Turn your ideas into 5 perfect prompts, instantly.</p>
+            <p id="auth-status" class="text-lg text-gray-600 mb-8">Signing you in automatically...</p>
             
-            <button id="google-signin-btn" class="w-full max-w-xs bg-white text-gray-700 font-semibold py-3 px-6 rounded-full border border-gray-300 shadow-md hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-3">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+            <!-- GOOGLE SIGN IN BUTTON IS BACK! -->
+            <button id="google-sign-in-btn" class="hidden bg-white text-gray-700 font-semibold py-3 px-6 rounded-2xl shadow-lg border border-gray-200 hover:bg-gray-100 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-50" disabled>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png" class="w-5 h-5" alt="Google logo">
                 <span>Sign in with Google</span>
             </button>
+            <p id="auth-error-message" class="text-sm text-red-500 mt-4 hidden">Error: Pop-up blocked or manual sign-in failed.</p>
+
         </div>
 
         <!-- 2. Main App Screen (Hidden by default) -->
@@ -378,14 +370,15 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // FIX: All Firebase SDKs must use a consistent version (11.6.1)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth, 
-            GoogleAuthProvider, 
-            signInWithPopup, 
-            onAuthStateChanged
-            // signInWithCustomToken and signInAnonymously removed to prevent automatic sign-in
+            onAuthStateChanged,
+            signInAnonymously,
+            signInWithCustomToken,
+            // Re-adding Google Auth provider and pop-up method
+            GoogleAuthProvider,
+            signInWithPopup
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
         import { 
             getFirestore, 
@@ -399,7 +392,7 @@
         // --- Firebase & App Config ---
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // No longer needed for auto-sign-in
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app); 
@@ -407,9 +400,7 @@
         setLogLevel('Debug'); // Enable debug logging for Firebase
 
         // --- Gemini API Config ---
-        // Used for Prompt Tuning (takes text/images and outputs JSON array of 5 strings)
         const PROMPT_TUNING_MODEL = `gemini-2.5-flash-preview-09-2025`;
-        // API key used for all model calls
         const API_KEY = ""; // Kept as empty string for runtime injection
 
         // --- App State ---
@@ -428,8 +419,10 @@
         // --- DOM Elements ---
         const loginScreen = document.getElementById('login-screen');
         const mainApp = document.getElementById('main-app');
-        const googleSignInBtn = document.getElementById('google-signin-btn');
         const creditCounter = document.getElementById('credit-counter');
+        const authStatus = document.getElementById('auth-status');
+        const googleSignInBtn = document.getElementById('google-sign-in-btn');
+        const authErrorMessage = document.getElementById('auth-error-message');
         
         // Wizard Steps
         const wizardSteps = document.querySelectorAll('.wizard-step');
@@ -462,8 +455,53 @@
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
         // --- 1. Authentication ---
+        
+        // Function for manual sign-in (via the button)
+        async function signInWithGoogle() {
+            try {
+                googleSignInBtn.disabled = true;
+                authStatus.textContent = "Attempting Google Sign-In...";
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                // If successful, onAuthStateChanged will handle the rest
+            } catch (error) {
+                console.error("Google Sign-In Error:", error);
+                authStatus.textContent = "Sign-In Failed. Try again.";
+                authErrorMessage.textContent = "Please ensure pop-ups are allowed or refresh to try automatic sign-in.";
+                authErrorMessage.classList.remove('hidden');
+                googleSignInBtn.disabled = false;
+            }
+        }
 
-        // This listener handles the transition to the main app *after* a successful sign-in
+        // Function to initialize sign-in (Custom token preferred, otherwise anonymous)
+        async function initializeAuth() {
+            // Ensure login screen is visible while auth is pending
+            loginScreen.classList.remove('hidden');
+            mainApp.classList.add('hidden');
+            
+            try {
+                if (initialAuthToken) {
+                    // 1. Try to use the secure token for automatic sign-in
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    authStatus.textContent = "Sign-in successful!";
+                } else {
+                    // 2. Fallback to anonymous sign-in if the token is somehow missing
+                    await signInAnonymously(auth);
+                    authStatus.textContent = "Signed in anonymously.";
+                }
+            } catch (error) {
+                // If the automatic method fails (rare, but possible)
+                console.error("Initial Auth Error:", error);
+                authStatus.textContent = "Authentication required.";
+                googleSignInBtn.classList.remove('hidden');
+                googleSignInBtn.disabled = false;
+            }
+        }
+        
+        // Attach listener to the manual button
+        googleSignInBtn.addEventListener('click', signInWithGoogle);
+
+        // This listener handles the transition to the main app *after* the sign-in succeeds
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is signed in
@@ -474,27 +512,19 @@
                 mainApp.classList.add('flex'); // Make it flex as designed
                 navigateToStep(1); // Start at step 1
             } else {
-                // User is signed out (or initial state)
+                // User is signed out (or initial state failed)
                 userId = null;
-                loginScreen.classList.remove('hidden');
-                mainApp.classList.add('hidden');
-                mainApp.classList.remove('flex');
+                // If we land here, ensure the button is visible for manual sign-in
+                if (!mainApp.classList.contains('flex')) {
+                    googleSignInBtn.classList.remove('hidden');
+                    googleSignInBtn.disabled = false;
+                    authStatus.textContent = "Sign in to continue.";
+                }
             }
         });
 
-        // This is the only way to sign in now
-        googleSignInBtn.addEventListener('click', async () => {
-            const provider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Google Sign-In Error: ", error);
-                showModal("Sign-In Failed", "There was an error trying to sign you in. Please try again.");
-            }
-        });
-        
-        // NOTE: The IIFE for automatic token/anonymous sign-in has been removed.
-        // The app now waits for the user to click the Google sign-in button.
+        // Start the automatic sign-in process
+        initializeAuth();
 
 
         // --- 2. Firestore Credit System ---
@@ -856,8 +886,4 @@ CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. 
 
     </script>
 </body>
-</html>
-    
-  </body>
-  
 </html>
