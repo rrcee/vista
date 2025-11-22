@@ -82,15 +82,8 @@
             </div>
             <h1 class="text-4xl font-bold text-gray-900 mb-2">VISTA</h1>
             <p class="text-xs font-medium uppercase text-indigo-600 tracking-wider">Visual Intent Synthesis Tuning Agent</p>
-            <p id="auth-status" class="text-lg text-gray-600 mb-8">Signing you in automatically...</p>
-            
-            <!-- GOOGLE SIGN IN BUTTON IS BACK! -->
-            <button id="google-sign-in-btn" class="hidden bg-white text-gray-700 font-semibold py-3 px-6 rounded-2xl shadow-lg border border-gray-200 hover:bg-gray-100 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-50" disabled>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png" class="w-5 h-5" alt="Google logo">
-                <span>Sign in with Google</span>
-            </button>
-            <p id="auth-error-message" class="text-sm text-red-500 mt-4 hidden">Error: Pop-up blocked or manual sign-in failed.</p>
-
+            <p id="auth-status" class="text-lg text-gray-600 mb-8">Authorizing user automatically...</p>
+            <p id="user-id-display" class="text-xs text-gray-400 mt-4"></p>
         </div>
 
         <!-- 2. Main App Screen (Hidden by default) -->
@@ -370,16 +363,14 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // --- NOTE: SDKs updated to version 12.6.0 as requested. ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
         import { 
             getAuth, 
             onAuthStateChanged,
             signInAnonymously,
-            signInWithCustomToken,
-            // Re-adding Google Auth provider and pop-up method
-            GoogleAuthProvider,
-            signInWithPopup
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
+            signInWithCustomToken
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js"; 
         import { 
             getFirestore, 
             doc, 
@@ -387,10 +378,10 @@
             setDoc, 
             runTransaction,
             setLogLevel
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
         // --- Firebase & App Config ---
-        // MANDATORY: Use the global variables for secure configuration.
+        // CRITICAL: We must use the dynamically injected variables for the platform to function.
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
@@ -411,19 +402,17 @@
         const MAX_CREDITS = 10;
         const MAX_IMAGES = 10;
         
-        // Wizard Data
         let visionText = "";
-        let uploadedImages = []; // Array of { base64, mimeType, id }
+        let uploadedImages = []; 
         let quizAnswers = {};
-        let targetModel = "DALL-E 3"; // Default target model
+        let targetModel = "DALL-E 3"; 
 
         // --- DOM Elements ---
         const loginScreen = document.getElementById('login-screen');
         const mainApp = document.getElementById('main-app');
         const creditCounter = document.getElementById('credit-counter');
         const authStatus = document.getElementById('auth-status');
-        const googleSignInBtn = document.getElementById('google-sign-in-btn');
-        const authErrorMessage = document.getElementById('auth-error-message');
+        const userIdDisplay = document.getElementById('user-id-display');
         
         // Wizard Steps
         const wizardSteps = document.querySelectorAll('.wizard-step');
@@ -438,7 +427,6 @@
         const imagePreviewGrid = document.getElementById('image-preview-grid');
         
         // Step 4
-        const targetModelRadios = document.querySelectorAll('input[name="targetModel"]');
         const generateBtn = document.getElementById('generate-btn');
         const generateBtnText = document.getElementById('generate-btn-text');
         const generateSpinner = document.getElementById('generate-spinner');
@@ -448,78 +436,48 @@
         const startOverBtn = document.getElementById('start-over-btn');
         const targetModelDisplay = document.getElementById('target-model-display');
 
-
         // Modals
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        // --- 1. Authentication ---
+        // --- 1. Authentication (Simplified) ---
         
-        // Function for manual sign-in (via the button)
-        async function signInWithGoogle() {
-            try {
-                googleSignInBtn.disabled = true;
-                authStatus.textContent = "Attempting Google Sign-In...";
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
-                // If successful, onAuthStateChanged will handle the rest
-            } catch (error) {
-                console.error("Google Sign-In Error:", error);
-                authStatus.textContent = "Sign-In Failed. Try again.";
-                authErrorMessage.textContent = "Please ensure pop-ups are allowed or refresh to try automatic sign-in.";
-                authErrorMessage.classList.remove('hidden');
-                googleSignInBtn.disabled = false;
-            }
-        }
-
-        // Function to initialize sign-in (Custom token preferred, otherwise anonymous)
         async function initializeAuth() {
-            // Ensure login screen is visible while auth is pending
             loginScreen.classList.remove('hidden');
             mainApp.classList.add('hidden');
             
             try {
+                // Use custom token if provided, otherwise sign in anonymously
                 if (initialAuthToken) {
-                    // 1. Try to use the secure token for automatic sign-in
                     await signInWithCustomToken(auth, initialAuthToken);
-                    authStatus.textContent = "Sign-in successful!";
                 } else {
-                    // 2. Fallback to anonymous sign-in if the token is somehow missing
                     await signInAnonymously(auth);
-                    authStatus.textContent = "Signed in anonymously.";
                 }
             } catch (error) {
-                // If the automatic method fails (rare, but possible)
-                console.error("Initial Auth Error:", error);
-                authStatus.textContent = "Authentication required.";
-                googleSignInBtn.classList.remove('hidden');
-                googleSignInBtn.disabled = false;
+                // If sign-in fails (e.g., bad token), onAuthStateChanged will still handle the UI
+                console.error("Initial Auth Attempt Error:", error.message);
+                authStatus.textContent = "Authentication Failed. Please refresh.";
             }
         }
         
-        // Attach listener to the manual button
-        googleSignInBtn.addEventListener('click', signInWithGoogle);
-
-        // This listener handles the transition to the main app *after* the sign-in succeeds
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in
+                // SUCCESS PATH
                 userId = user.uid;
+                userIdDisplay.textContent = `User ID: ${userId}`;
                 initUserDocument(userId);
                 loginScreen.classList.add('hidden');
                 mainApp.classList.remove('hidden');
-                mainApp.classList.add('flex'); // Make it flex as designed
-                navigateToStep(1); // Start at step 1
+                mainApp.classList.add('flex'); 
+                navigateToStep(1); 
             } else {
-                // User is signed out (or initial state failed)
+                // FALLBACK PATH
                 userId = null;
-                // If we land here, ensure the button is visible for manual sign-in
-                if (!mainApp.classList.contains('flex')) {
-                    googleSignInBtn.classList.remove('hidden');
-                    googleSignInBtn.disabled = false;
-                    authStatus.textContent = "Sign in to continue.";
+                // If we land here and mainApp is hidden, show the error message.
+                if (mainApp.classList.contains('hidden')) {
+                     authStatus.textContent = "Could not authenticate user. Please refresh.";
                 }
             }
         });
@@ -532,7 +490,7 @@
 
         async function initUserDocument(uid) {
             if (!uid) return;
-            // The path matches the one secured in the guide: artifacts/{appId}/users/{userId}/vista-data/usage
+            // Private data path for credit limit
             userDocRef = doc(db, `artifacts/${appId}/users/${uid}/vista-data/usage`);
             const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
             
@@ -540,6 +498,7 @@
                 const docSnap = await getDoc(userDocRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    // Reset credits if a new day
                     if (data.lastUsedDate === today) {
                         dailyCredits = data.creditsLeft;
                     } else {
@@ -547,6 +506,7 @@
                         await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
                     }
                 } else {
+                    // Create document if it doesn't exist
                     dailyCredits = MAX_CREDITS;
                     await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
                 }
@@ -564,7 +524,6 @@
             if (dailyCredits <= 0) {
                 generateBtnText.textContent = "No Credits Left Today";
             } else {
-                // Updated text to reflect 5 prompts
                 generateBtnText.textContent = `Tune 5 Prompts (1 Credit)`; 
             }
         }
@@ -580,7 +539,8 @@
                     const currentCredits = freshSnap.data().creditsLeft;
                     if (currentCredits > 0) {
                         const newCreditCount = currentCredits - 1;
-                        transaction.update(userDocRef, { creditsLeft: newCreditCount });
+                        // Use setDoc instead of updateDoc in case the document was deleted by external forces
+                        transaction.set(userDocRef, { creditsLeft: newCreditCount, lastUsedDate: new Date().toISOString().split('T')[0] });
                         return newCreditCount;
                     } else {
                         // Throw error to roll back transaction
@@ -740,8 +700,8 @@
             try {
                 // --- Phase 1: Prompt Tuning (LLM Call) ---
                 const systemPrompt = `You are VISTA (Visual Intent Synthesis Tuning Agent), a friendly and highly creative prompt engineer. A user has provided a rich set of data (text idea, quiz preferences, and reference images).
-Your job is to synthesize ALL this information into 5 diverse, high-quality, professional AI art prompts.
-CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. Use its unique style and syntax (e.g., Midjourney requires short, descriptive text; DALL-E 3 prefers simple language; SDXL needs strong keywords).
+CRITICALLY: Your job is to synthesize ALL this information into 5 diverse, high-quality, professional AI art prompts.
+- Tune the prompts specifically for the chosen model: ${targetModel}. Use its unique style and syntax (e.g., Midjourney requires short, descriptive text; DALL-E 3 prefers simple language; SDXL needs strong keywords).
 - Analyze the user's text for the core idea.
 - Analyze the JSON quiz answers for specific keywords to include.
 - Analyze ALL provided images for clothing styles, aesthetics, and color palettes.
@@ -777,7 +737,6 @@ CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. 
 
             } catch (error) {
                 console.error("Error during generation: ", error);
-                // Re-enable button on fatal error
                 setLoadingState(false); 
                 showModal("Tuning Failed", `Sorry, something went wrong during the prompt tuning process. ${error.message}`);
             } finally {
@@ -801,8 +760,11 @@ CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. 
                     if (!jsonText) throw new Error("Invalid API response structure. Response text was empty.");
                     return JSON.parse(jsonText);
                 } catch (error) {
-                    console.warn(`Attempt ${i + 1} failed. Retrying...`, error.message);
-                    if (i === retries - 1) throw error;
+                    // Suppress console logging of retries to keep console clean unless it's the final failure
+                    if (i === retries - 1) {
+                         console.error(`Final API fetch attempt failed after ${retries} retries.`, error);
+                         throw error;
+                    }
                     await new Promise(res => setTimeout(res, delay));
                     delay *= 2;
                 }
@@ -840,48 +802,42 @@ CRITICALLY: Tune the prompts specifically for the chosen model: ${targetModel}. 
             generateSpinner.classList.toggle('hidden', !isLoading);
         }
 
-        function copyToClipboard(text, buttonEl, originalIcon, checkIcon) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed"; textArea.style.opacity = "0";
-            document.body.appendChild(textArea);
-            textArea.focus(); textArea.select();
+        function copyToClipboard(text, button, originalIcon, checkIcon) {
+            // Using document.execCommand('copy') for better compatibility within iframes
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
             try {
-                if (document.execCommand('copy')) { 
-                    buttonEl.innerHTML = checkIcon;
-                    buttonEl.disabled = true;
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    button.innerHTML = checkIcon;
                     setTimeout(() => {
-                        buttonEl.innerHTML = originalIcon;
-                        buttonEl.disabled = false;
-                    }, 2000);
+                        button.innerHTML = originalIcon;
+                    }, 1500);
+                } else {
+                    console.error('Copy command was unsuccessful');
                 }
-            } catch (err) { console.error('Fallback: Oops, unable to copy', err); }
-            document.body.removeChild(textArea);
+            } catch (err) {
+                console.error('Oops, unable to copy', err);
+            }
+            document.body.removeChild(textarea);
         }
         
         function resetWizard() {
-            // Reset state
-            visionText = "";
+            // Reset UI and State
+            promptInput.value = '';
             uploadedImages = [];
-            quizAnswers = {};
-            targetModel = "DALL-E 3";
-            
-            // Reset UI
-            promptInput.value = "";
-            imagePreviewGrid.innerHTML = "";
+            imagePreviewGrid.innerHTML = '';
             updateImageCounter();
             
-            // Uncheck all boxes, reset radio button
-            const allCheckboxes = document.querySelectorAll('#quiz-form-a input, #quiz-form-b input');
-            allCheckboxes.forEach(box => {
-                if(box.type === 'checkbox') {
-                    box.checked = false;
-                } else if (box.name === 'targetModel' && box.value === 'DALL-E 3') {
-                    box.checked = true;
-                }
+            // Reset Quiz
+            document.querySelectorAll('#quiz-form-a input, #quiz-form-b input').forEach(input => {
+                input.checked = (input.name === 'targetModel' && input.value === 'DALL-E 3');
             });
             
-            // Go to step 1
+            // Go back to the first step
             navigateToStep(1);
         }
 
