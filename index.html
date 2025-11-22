@@ -43,7 +43,6 @@
             font-weight: 500;
             transition: all 0.2s ease;
             text-align: center;
-            /* FIXED: Removed nowrap to allow wrapping on mobile */
             white-space: normal; 
         }
         /* Style for when the (hidden) checkbox is checked */
@@ -56,7 +55,7 @@
              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); 
         }
         
-        /* FIXED: Better mobile handling for model selection (long text) */
+        /* Better mobile handling for model selection (long text) */
         @media (max-width: 640px) {
             .question-group .flex-wrap > .quiz-option {
                 width: 100%;
@@ -307,7 +306,7 @@
                             </div>
                         </div>
                         
-                        <!-- Q10: Target Model (NEW) -->
+                        <!-- Q10: Target Model -->
                         <div class="question-group">
                             <h3 class="font-semibold text-gray-700 mb-3">10. Target AI Model (For Tuning)</h3>
                             <div class="flex flex-wrap gap-2">
@@ -347,7 +346,7 @@
                     </div>
                 </div>
                 
-                <!-- Wizard Step 5: Results - Renamed to Prompt Results -->
+                <!-- Wizard Step 5: Results -->
                 <div id="step-5-results" class="wizard-step hidden flex-1 flex-col p-4 md:p-6 space-y-6">
                     <h2 class="text-2xl font-bold text-gray-900">Your Tuned Prompts Are Ready!</h2>
                     <p class="text-gray-600">VISTA synthesized your input into 5 tailored prompts for **<span id="target-model-display" class="font-semibold text-indigo-600"></span>**. Copy and use them in your favorite image generator.</p>
@@ -382,7 +381,7 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- NOTE: SDKs updated to version 12.6.0 as requested. ---
+        // --- NOTE: SDKs updated to version 12.6.0. ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
         import { 
             getAuth, 
@@ -402,7 +401,6 @@
         } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
         // --- Firebase & App Config ---
-        // Using the provided config directly (hardcoded for production reliability)
         const firebaseConfig = {
             apiKey: "AIzaSyAqtL2RiUVW766m9Mgxm3D37ZDU4WKDmR0",
             authDomain: "vista-65b5e.firebaseapp.com",
@@ -411,20 +409,21 @@
             messagingSenderId: "178705255946",
             appId: "1:178705255946:web:ea449f74ad44489f0c99f3"
         };
-        const appId = 'vista-65b5e';  // Derived from config for consistency
-        const initialAuthToken = null;  // No custom token provided; defaults to anonymous auth
+        const appId = 'vista-65b5e';  
+        const initialAuthToken = null;  
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app); 
         const db = getFirestore(app);
-        setLogLevel('debug'); // Fixed: lowercase for actual debug logging
+        setLogLevel('debug'); 
 
         // --- Google Provider Setup ---
         const provider = new GoogleAuthProvider();
 
-        // --- Gemini API Config ---
-        const PROMPT_TUNING_MODEL = `gemini-2.5-flash-preview-09-2025`;
-        const API_KEY = "AIzaSyB7qwjvDXOOIJR1KMT4PpAuhn9kjPqbhls"; // TODO: Proxy via backend
+        // --- FIXED: Updated to stable multimodal model as of Nov 2025 ---
+        const PROMPT_TUNING_MODEL = `gemini-2.5-flash`;
+        // TODO: Replace with your own secure API key (proxy via backend if possible)
+        const API_KEY = "AIzaSyB7qwjvDXOOIJR1KMT4PpAuhn9kjPqbhls"; 
 
         // --- App State ---
         let userId = null;
@@ -474,7 +473,7 @@
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        // --- 1. Authentication (Updated with Google) ---
+        // --- 1. Authentication ---
         
         async function initializeAuth() {
             loginScreen.classList.remove('hidden');
@@ -490,16 +489,13 @@
                 
                 signInWithPopup(auth, provider)
                     .then((result) => {
-                        // This will trigger onAuthStateChanged automatically
                         console.log("Google sign-in success:", result.user);
-                        // Optional: Get tokens if needed
                         const credential = GoogleAuthProvider.credentialFromResult(result);
                         const token = credential.accessToken;
                     })
                     .catch((error) => {
                         console.error("Google sign-in error:", error);
                         authStatus.textContent = `Sign-in failed: ${error.message}. Trying anonymous...`;
-                        // Fallback to anonymous
                         signInAnonymously(auth).catch((anonError) => {
                             authStatus.textContent = "Auth failed completely. Please refresh.";
                             console.error("Anonymous fallback failed:", anonError);
@@ -512,13 +508,9 @@
             });
 
             try {
-                // Use custom token if provided, otherwise wait for user interaction (Google or anon fallback)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    // Don't auto-anon anymore; let user choose Google first
-                    // Anon only triggers on Google error (see catch above)
-                }
+                } 
             } catch (error) {
                 console.error("Initial Auth Attempt Error:", error.message);
                 authStatus.textContent = "Something went wrong. Please try signing in.";
@@ -527,7 +519,6 @@
         
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // SUCCESS PATH
                 userId = user.uid;
                 userIdDisplay.textContent = `User ID: ${userId}`;
                 initUserDocument(userId);
@@ -536,16 +527,13 @@
                 mainApp.classList.add('flex'); 
                 navigateToStep(1); 
             } else {
-                // FALLBACK PATH
                 userId = null;
-                // If we land here and mainApp is hidden, show the error message.
                 if (mainApp.classList.contains('hidden')) {
                      authStatus.textContent = "Not signed in yet. Please sign in above.";
                 }
             }
         });
 
-        // Start the process
         initializeAuth();
 
 
@@ -553,15 +541,13 @@
 
         async function initUserDocument(uid) {
             if (!uid) return;
-            // Private data path for credit limit
             userDocRef = doc(db, `artifacts/${appId}/users/${uid}/vista-data/usage`);
-            const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+            const today = new Date().toISOString().split('T')[0]; 
             
             try {
                 const docSnap = await getDoc(userDocRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    // Reset credits if a new day
                     if (data.lastUsedDate === today) {
                         dailyCredits = data.creditsLeft;
                     } else {
@@ -569,7 +555,6 @@
                         await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
                     }
                 } else {
-                    // Create document if it doesn't exist
                     dailyCredits = MAX_CREDITS;
                     await setDoc(userDocRef, { creditsLeft: MAX_CREDITS, lastUsedDate: today });
                 }
@@ -602,17 +587,15 @@
                     const currentCredits = freshSnap.data().creditsLeft;
                     if (currentCredits > 0) {
                         const newCreditCount = currentCredits - 1;
-                        // Use setDoc instead of updateDoc in case the document was deleted by external forces
                         transaction.set(userDocRef, { creditsLeft: newCreditCount, lastUsedDate: new Date().toISOString().split('T')[0] });
                         return newCreditCount;
                     } else {
-                        // Throw error to roll back transaction
                         throw new Error("No credits available.");
                     }
                 });
                 dailyCredits = newCredits;
                 updateCreditUI();
-                return true; // Success
+                return true; 
             } catch (error) {
                 console.error("Error updating credits: ", error);
                 if (error.message === "No credits available.") {
@@ -620,7 +603,7 @@
                 } else {
                     showModal("Credit Error", "Could not update your credit count. Please refresh.");
                 }
-                return false; // Failure
+                return false; 
             }
         }
 
@@ -638,12 +621,16 @@
                 stepToShow.classList.remove('hidden');
                 stepToShow.classList.add('flex');
             }
-            window.scrollTo(0, 0); // Scroll to top on step change
+            window.scrollTo(0, 0); 
         }
         
         // --- Navigation Button Listeners ---
         document.getElementById('btn-to-step-2').addEventListener('click', () => {
-            visionText = promptInput.value; // Save data
+            visionText = promptInput.value.trim(); // FIXED: Trim whitespace
+            if (!visionText) {
+                showModal("Missing Input", "Please enter your core idea before continuing.");
+                return;
+            }
             navigateToStep(2);
         });
         document.getElementById('btn-back-to-step-1').addEventListener('click', () => navigateToStep(1));
@@ -666,6 +653,8 @@
                 }
                 
                 const file = files[i];
+                if (!file.type.startsWith('image/')) continue; // FIXED: Skip non-images
+                
                 const fileId = crypto.randomUUID(); 
                 
                 const reader = new FileReader();
@@ -680,6 +669,7 @@
                     addImageThumbnail(imageData, event.target.result);
                     updateImageCounter();
                 };
+                reader.onerror = () => console.error('Failed to read file:', file.name);
                 reader.readAsDataURL(file);
             }
             e.target.value = null; 
@@ -693,12 +683,15 @@
             const img = document.createElement('img');
             img.src = src;
             img.className = 'w-full h-full object-cover';
+            img.onerror = () => { console.error('Thumbnail load failed'); thumbContainer.remove(); };
             
             const removeBtn = document.createElement('button');
             removeBtn.className = 'absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 hover:bg-black/75 transition-all';
             removeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+            removeBtn.title = 'Remove image';
             
-            removeBtn.addEventListener('click', () => {
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 uploadedImages = uploadedImages.filter(img => img.id !== imageData.id);
                 thumbContainer.remove();
                 updateImageCounter();
@@ -711,7 +704,14 @@
 
         function updateImageCounter() {
             imageCounter.textContent = `${uploadedImages.length} of ${MAX_IMAGES} uploaded`;
-            imageUploadBox.classList.toggle('hidden', uploadedImages.length >= MAX_IMAGES);
+            // FIXED: Don't hide the whole box; just disable upload if maxed
+            if (uploadedImages.length >= MAX_IMAGES) {
+                imageUploadBox.style.opacity = '0.5';
+                imageUploadBox.style.cursor = 'not-allowed';
+            } else {
+                imageUploadBox.style.opacity = '1';
+                imageUploadBox.style.cursor = 'pointer';
+            }
         }
 
         // --- 5. Modal Controls ---
@@ -732,8 +732,8 @@
                 showModal("Limit Reached", "You've used all 10 generations for today. Please come back tomorrow!");
                 return;
             }
-            
-            // 1. Collect Quiz & Model Data
+
+            // FIXED: Better data collection & validation
             quizAnswers = {};
             const checkedBoxes = document.querySelectorAll('#quiz-form-a input:checked, #quiz-form-b input:checked');
             checkedBoxes.forEach(box => {
@@ -741,74 +741,100 @@
                 const value = box.value;
                 if (name === 'targetModel') {
                     targetModel = value;
-                } else {
-                    if (!quizAnswers[name]) {
-                        quizAnswers[name] = [];
-                    }
+                } else if (box.checked) { // Double-check checked
+                    if (!quizAnswers[name]) quizAnswers[name] = [];
                     quizAnswers[name].push(value);
                 }
             });
             
-            // Display model name in the results screen
+            if (Object.keys(quizAnswers).length === 0) {
+                console.warn('No quiz preferences selected – prompts may be generic');
+            }
+
+            if (!visionText.trim()) {
+                showModal("Missing Core Idea", "Please go back and enter your core idea in Step 1.");
+                return;
+            }
+            
             targetModelDisplay.textContent = targetModel;
 
-            // 2. Debit Credit
             const creditDebited = await updateUserCredits();
-            if (!creditDebited) return; // Stop if credit debit failed
+            if (!creditDebited) return;
 
             setLoadingState(true);
             
             let tunedPrompts = [];
 
             try {
-                // --- Phase 1: Prompt Tuning (LLM Call) ---
-                const systemPrompt = `You are VISTA (Visual Intent Synthesis Tuning Agent), a friendly and highly creative prompt engineer. A user has provided a rich set of data (text idea, quiz preferences, and reference images).
-CRITICALLY: Your job is to synthesize ALL this information into 5 diverse, high-quality, professional AI art prompts.
-- Tune the prompts specifically for the chosen model: ${targetModel}. Use its unique style and syntax (e.g., Midjourney requires short, descriptive text; DALL-E 3 prefers simple language; SDXL needs strong keywords).
-- Analyze the user's text for the core idea.
-- Analyze the JSON quiz answers for specific keywords to include.
-- Analyze ALL provided images for clothing styles, aesthetics, and color palettes.
-- Combine all data into 5 distinct, detailed, paragraph-length prompts.
-- Do NOT chat or explain. Respond ONLY with a valid JSON array of 5 strings.
-- Example Response: ["prompt 1...", "prompt 2...", "prompt 3...", "prompt 4...", "prompt 5..."]`;
+                const systemPrompt = `You are VISTA, a creative prompt engineer. Synthesize the user's core idea, quiz preferences, and reference images (if any) into EXACTLY 5 diverse, high-quality AI art prompts tuned for ${targetModel}.
+
+Key guidelines:
+- Incorporate the core idea as the central theme.
+- Weave in ALL selected quiz preferences (colors, vibe, brands, celebs, setting, lighting, items, textures, style) naturally.
+- If images provided, describe styles, colors, and aesthetics from them explicitly.
+- For ${targetModel}: Use concise, descriptive language; emphasize keywords for aesthetics.
+- Output ONLY a JSON array: ["Prompt 1", "Prompt 2", "Prompt 3", "Prompt 4", "Prompt 5"]. No extra text, explanations, or markdown.`;
 
                 const promptTuningPayload = {
-                    contents: [{ role: "user", parts: [
-                        { text: `User's core idea: "${visionText}"` },
-                        { text: `User's quiz preferences: ${JSON.stringify(quizAnswers)}` },
-                        ...uploadedImages.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.base64 } }))
-                    ] }],
+                    contents: [{ 
+                        role: "user", 
+                        parts: [
+                            { text: `Core idea: ${visionText}` },
+                            { text: `\nQuiz preferences: ${JSON.stringify(quizAnswers)}` },
+                            ...uploadedImages.slice(0, 4).map(img => ({ // FIXED: Limit to 4 images to avoid token limits
+                                inlineData: { mimeType: img.mimeType, data: img.base64 }
+                            }))
+                        ] 
+                    }],
                     systemInstruction: { parts: [{ text: systemPrompt }] },
                     generationConfig: {
                         responseMimeType: "application/json",
                         responseSchema: {
                             type: "ARRAY",
-                            items: { type: "STRING" }
-                        }
+                            items: { type: "STRING" },
+                            maxItems: 5,
+                            minItems: 5
+                        },
+                        temperature: 0.7 // FIXED: Added for creativity
                     }
                 };
                 
-                tunedPrompts = await fetchWithBackoff(`https://generativelanguage.googleapis.com/v1beta/models/${PROMPT_TUNING_MODEL}:generateContent?key=${API_KEY}`, promptTuningPayload);
+                console.log('Sending payload to Gemini:', JSON.stringify(promptTuningPayload, null, 2)); // FIXED: Debug log
+                
+                tunedPrompts = await fetchWithBackoff(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${PROMPT_TUNING_MODEL}:generateContent?key=${API_KEY}`, 
+                    promptTuningPayload
+                );
 
-                if (!tunedPrompts || tunedPrompts.length === 0) {
-                    throw new Error("Received empty or invalid prompts from API.");
+                console.log('Received prompts:', tunedPrompts); // FIXED: Debug log
+
+                if (!tunedPrompts || !Array.isArray(tunedPrompts) || tunedPrompts.length !== 5) {
+                    throw new Error(`Invalid response: Expected 5 prompts, got ${tunedPrompts?.length || 0}. Full response: ${JSON.stringify(tunedPrompts)}`);
                 }
 
-                // --- Phase 2: Display Results ---
                 displayPrompts(tunedPrompts);
                 navigateToStep(5);
 
             } catch (error) {
-                console.error("Error during generation: ", error);
+                console.error("Generation error details:", error); // FIXED: Better logging
                 setLoadingState(false); 
-                showModal("Tuning Failed", `Sorry, something went wrong during the prompt tuning process. ${error.message}`);
+                let errorMsg = "Sorry, something went wrong during prompt tuning.";
+                if (error.message.includes('API Error: 400')) {
+                    errorMsg += " Invalid request – check your inputs and try fewer images.";
+                } else if (error.message.includes('API Error: 403')) {
+                    errorMsg += " API key issue – contact support or check quota.";
+                } else if (error.message.includes('API Error: 429')) {
+                    errorMsg += " Rate limit exceeded – wait a bit and try again.";
+                } else {
+                    errorMsg += ` Details: ${error.message}`;
+                }
+                showModal("Tuning Failed", errorMsg);
             } finally {
                 setLoadingState(false);
             }
         }
         
-        // --- 7. Helper Functions ---
-
+        // --- FIXED: Improved fetch with markdown stripping ---
         async function fetchWithBackoff(url, payload, retries = 3, delay = 1000) {
             for (let i = 0; i < retries; i++) {
                 try {
@@ -817,16 +843,30 @@ CRITICALLY: Your job is to synthesize ALL this information into 5 diverse, high-
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    if (!response.ok) throw new Error(`API Error: ${response.status} - ${await response.text()}`);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`API Error: ${response.status} - ${errorText}`);
+                    }
                     const result = await response.json();
-                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!jsonText) throw new Error("Invalid API response structure. Response text was empty.");
-                    return JSON.parse(jsonText);
+                    let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!jsonText) throw new Error("Empty response from API.");
+                    
+                    // FIXED: Strip common markdown wrappers for robustness
+                    jsonText = jsonText
+                        .replace(/```json\s*/g, '')
+                        .replace(/```\s*$/g, '')
+                        .replace(/^\s*[\[\{]/, '[') // Ensure starts with array
+                        .replace(/[\]\}]\s*$/, ']') // Ensure ends with array
+                        .trim();
+                    
+                    console.log('Raw JSON text:', jsonText); // FIXED: Debug
+                    
+                    const parsed = JSON.parse(jsonText);
+                    return parsed;
                 } catch (error) {
-                    // Suppress console logging of retries to keep console clean unless it's the final failure
+                    console.warn(`Retry ${i+1}/${retries} failed:`, error.message);
                     if (i === retries - 1) {
-                         console.error(`Final API fetch attempt failed after ${retries} retries.`, error);
-                         throw error;
+                        throw error;
                     }
                     await new Promise(res => setTimeout(res, delay));
                     delay *= 2;
@@ -835,9 +875,12 @@ CRITICALLY: Your job is to synthesize ALL this information into 5 diverse, high-
         }
 
         function displayPrompts(prompts) {
-            // Display Tuned Prompts
             promptList.innerHTML = ''; 
             prompts.forEach((promptText, index) => {
+                if (!promptText || typeof promptText !== 'string') {
+                    console.warn(`Invalid prompt at index ${index}:`, promptText);
+                    return;
+                }
                 const card = document.createElement('div');
                 card.className = "bg-white p-4 rounded-2xl shadow-lg border border-gray-100 flex justify-between items-start space-x-3";
                 card.innerHTML = `
@@ -865,42 +908,43 @@ CRITICALLY: Your job is to synthesize ALL this information into 5 diverse, high-
             generateSpinner.classList.toggle('hidden', !isLoading);
         }
 
+        // FIXED: Modern clipboard with fallback
         function copyToClipboard(text, button, originalIcon, checkIcon) {
-            // Using document.execCommand('copy') for better compatibility within iframes
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    button.innerHTML = checkIcon;
+                    setTimeout(() => button.innerHTML = originalIcon, 1500);
+                }).catch(() => fallbackCopy(text, button, originalIcon, checkIcon));
+            } else {
+                fallbackCopy(text, button, originalIcon, checkIcon);
+            }
+        }
+
+        function fallbackCopy(text, button, originalIcon, checkIcon) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
-            
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    button.innerHTML = checkIcon;
-                    setTimeout(() => {
-                        button.innerHTML = originalIcon;
-                    }, 1500);
-                } else {
-                    console.error('Copy command was unsuccessful');
-                }
+                document.execCommand('copy');
+                button.innerHTML = checkIcon;
+                setTimeout(() => button.innerHTML = originalIcon, 1500);
             } catch (err) {
-                console.error('Oops, unable to copy', err);
+                console.error('Copy failed:', err);
             }
             document.body.removeChild(textarea);
         }
         
         function resetWizard() {
-            // Reset UI and State
             promptInput.value = '';
             uploadedImages = [];
             imagePreviewGrid.innerHTML = '';
             updateImageCounter();
             
-            // Reset Quiz
-            document.querySelectorAll('#quiz-form-a input, #quiz-form-b input').forEach(input => {
-                input.checked = (input.name === 'targetModel' && input.value === 'DALL-E 3');
-            });
+            document.querySelectorAll('#quiz-form-a input[type="checkbox"], #quiz-form-b input[type="checkbox"]').forEach(input => input.checked = false);
+            document.querySelector('input[name="targetModel"][value="DALL-E 3"]').checked = true;
+            visionText = "";
             
-            // Go back to the first step
             navigateToStep(1);
         }
 
